@@ -1,6 +1,6 @@
 <?php
 /**
- * Custom post type for tracked links
+ * Handles the custom post type for tracked links
  */
 class WP_Link_Tracker_Post_Type {
     /**
@@ -8,9 +8,10 @@ class WP_Link_Tracker_Post_Type {
      */
     public function init() {
         add_action('init', array($this, 'register_post_type'));
-        add_action('init', array($this, 'register_taxonomies'));
         add_action('add_meta_boxes', array($this, 'add_meta_boxes'));
-        add_action('save_post', array($this, 'save_meta_box_data'));
+        add_action('save_post', array($this, 'save_meta_boxes'));
+        add_filter('manage_wplinktracker_posts_columns', array($this, 'add_custom_columns'));
+        add_action('manage_wplinktracker_posts_custom_column', array($this, 'display_custom_columns'), 10, 2);
     }
 
     /**
@@ -18,317 +19,259 @@ class WP_Link_Tracker_Post_Type {
      */
     public function register_post_type() {
         $labels = array(
-            'name'               => _x('Tracked Links', 'post type general name', 'wp-link-tracker'),
-            'singular_name'      => _x('Tracked Link', 'post type singular name', 'wp-link-tracker'),
-            'menu_name'          => _x('Link Tracker', 'admin menu', 'wp-link-tracker'),
-            'name_admin_bar'     => _x('Tracked Link', 'add new on admin bar', 'wp-link-tracker'),
-            'add_new'            => _x('Add New', 'tracked link', 'wp-link-tracker'),
-            'add_new_item'       => __('Add New Tracked Link', 'wp-link-tracker'),
-            'new_item'           => __('New Tracked Link', 'wp-link-tracker'),
-            'edit_item'          => __('Edit Tracked Link', 'wp-link-tracker'),
-            'view_item'          => __('View Tracked Link', 'wp-link-tracker'),
-            'all_items'          => __('All Tracked Links', 'wp-link-tracker'),
-            'search_items'       => __('Search Tracked Links', 'wp-link-tracker'),
-            'parent_item_colon'  => __('Parent Tracked Links:', 'wp-link-tracker'),
-            'not_found'          => __('No tracked links found.', 'wp-link-tracker'),
-            'not_found_in_trash' => __('No tracked links found in Trash.', 'wp-link-tracker')
+            'name'                  => _x('Tracked Links', 'Post Type General Name', 'wp-link-tracker'),
+            'singular_name'         => _x('Tracked Link', 'Post Type Singular Name', 'wp-link-tracker'),
+            'menu_name'             => __('Link Tracker', 'wp-link-tracker'),
+            'name_admin_bar'        => __('Tracked Link', 'wp-link-tracker'),
+            'archives'              => __('Link Archives', 'wp-link-tracker'),
+            'attributes'            => __('Link Attributes', 'wp-link-tracker'),
+            'parent_item_colon'     => __('Parent Link:', 'wp-link-tracker'),
+            'all_items'             => __('All Links', 'wp-link-tracker'),
+            'add_new_item'          => __('Add New Link', 'wp-link-tracker'),
+            'add_new'               => __('Add New', 'wp-link-tracker'),
+            'new_item'              => __('New Link', 'wp-link-tracker'),
+            'edit_item'             => __('Edit Link', 'wp-link-tracker'),
+            'update_item'           => __('Update Link', 'wp-link-tracker'),
+            'view_item'             => __('View Link', 'wp-link-tracker'),
+            'view_items'            => __('View Links', 'wp-link-tracker'),
+            'search_items'          => __('Search Links', 'wp-link-tracker'),
+            'not_found'             => __('Not found', 'wp-link-tracker'),
+            'not_found_in_trash'    => __('Not found in Trash', 'wp-link-tracker'),
+            'featured_image'        => __('Featured Image', 'wp-link-tracker'),
+            'set_featured_image'    => __('Set featured image', 'wp-link-tracker'),
+            'remove_featured_image' => __('Remove featured image', 'wp-link-tracker'),
+            'use_featured_image'    => __('Use as featured image', 'wp-link-tracker'),
+            'insert_into_item'      => __('Insert into link', 'wp-link-tracker'),
+            'uploaded_to_this_item' => __('Uploaded to this link', 'wp-link-tracker'),
+            'items_list'            => __('Links list', 'wp-link-tracker'),
+            'items_list_navigation' => __('Links list navigation', 'wp-link-tracker'),
+            'filter_items_list'     => __('Filter links list', 'wp-link-tracker'),
         );
 
         $args = array(
-            'labels'             => $labels,
-            'description'        => __('Tracked links for the WP Link Tracker plugin.', 'wp-link-tracker'),
-            'public'             => false,
-            'publicly_queryable' => false,
-            'show_ui'            => true,
-            'show_in_menu'       => true,
-            'query_var'          => true,
-            'rewrite'            => array('slug' => 'tracked-link'),
-            'capability_type'    => 'post',
-            'has_archive'        => false,
-            'hierarchical'       => false,
-            'menu_position'      => 30,
-            'menu_icon'          => 'dashicons-admin-links',
-            'supports'           => array('title')
+            'label'                 => __('Tracked Link', 'wp-link-tracker'),
+            'description'           => __('Links that are being tracked', 'wp-link-tracker'),
+            'labels'                => $labels,
+            'supports'              => array('title'),
+            'hierarchical'          => false,
+            'public'                => false,
+            'show_ui'               => true,
+            'show_in_menu'          => true,
+            'menu_position'         => 25,
+            'menu_icon'             => 'dashicons-admin-links',
+            'show_in_admin_bar'     => false,
+            'show_in_nav_menus'     => false,
+            'can_export'            => true,
+            'has_archive'           => false,
+            'exclude_from_search'   => true,
+            'publicly_queryable'    => false,
+            'capability_type'       => 'post',
+            'show_in_rest'          => false,
         );
 
         register_post_type('wplinktracker', $args);
     }
 
     /**
-     * Register taxonomies for the post type.
-     */
-    public function register_taxonomies() {
-        // Register campaign taxonomy
-        $labels = array(
-            'name'              => _x('Campaigns', 'taxonomy general name', 'wp-link-tracker'),
-            'singular_name'     => _x('Campaign', 'taxonomy singular name', 'wp-link-tracker'),
-            'search_items'      => __('Search Campaigns', 'wp-link-tracker'),
-            'all_items'         => __('All Campaigns', 'wp-link-tracker'),
-            'parent_item'       => __('Parent Campaign', 'wp-link-tracker'),
-            'parent_item_colon' => __('Parent Campaign:', 'wp-link-tracker'),
-            'edit_item'         => __('Edit Campaign', 'wp-link-tracker'),
-            'update_item'       => __('Update Campaign', 'wp-link-tracker'),
-            'add_new_item'      => __('Add New Campaign', 'wp-link-tracker'),
-            'new_item_name'     => __('New Campaign Name', 'wp-link-tracker'),
-            'menu_name'         => __('Campaigns', 'wp-link-tracker'),
-        );
-
-        $args = array(
-            'hierarchical'      => true,
-            'labels'            => $labels,
-            'show_ui'           => true,
-            'show_admin_column' => true,
-            'query_var'         => true,
-            'rewrite'           => array('slug' => 'campaign'),
-        );
-
-        register_taxonomy('wplinktracker_campaign', array('wplinktracker'), $args);
-    }
-
-    /**
-     * Add meta boxes for the custom post type.
+     * Add meta boxes.
      */
     public function add_meta_boxes() {
         add_meta_box(
             'wplinktracker_link_details',
             __('Link Details', 'wp-link-tracker'),
-            array($this, 'render_link_details_meta_box'),
+            array($this, 'link_details_meta_box'),
             'wplinktracker',
             'normal',
             'high'
         );
 
         add_meta_box(
-            'wplinktracker_link_stats',
-            __('Link Statistics', 'wp-link-tracker'),
-            array($this, 'render_link_stats_meta_box'),
+            'wplinktracker_statistics',
+            __('Statistics', 'wp-link-tracker'),
+            array($this, 'statistics_meta_box'),
             'wplinktracker',
-            'normal',
+            'side',
             'default'
         );
     }
 
     /**
-     * Render the link details meta box.
+     * Link details meta box.
      */
-    public function render_link_details_meta_box($post) {
-        // Add nonce for security
-        wp_nonce_field('wplinktracker_save_meta_box_data', 'wplinktracker_meta_box_nonce');
+    public function link_details_meta_box($post) {
+        wp_nonce_field('wplinktracker_meta_box', 'wplinktracker_meta_box_nonce');
 
-        // Get existing values
         $destination_url = get_post_meta($post->ID, '_wplinktracker_destination_url', true);
         $short_code = get_post_meta($post->ID, '_wplinktracker_short_code', true);
-        $short_url = home_url('go/' . $short_code);
+        $short_url = $this->get_short_url($short_code);
 
-        // Output fields
         ?>
+        <table class="form-table">
+            <tr>
+                <th scope="row">
+                    <label for="wplinktracker_destination_url"><?php _e('Destination URL', 'wp-link-tracker'); ?></label>
+                </th>
+                <td>
+                    <input type="url" id="wplinktracker_destination_url" name="wplinktracker_destination_url" 
+                           value="<?php echo esc_attr($destination_url); ?>" class="regular-text" required />
+                    <p class="description"><?php _e('The URL where visitors will be redirected.', 'wp-link-tracker'); ?></p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">
+                    <label for="wplinktracker_short_code"><?php _e('Short Code', 'wp-link-tracker'); ?></label>
+                </th>
+                <td>
+                    <input type="text" id="wplinktracker_short_code" name="wplinktracker_short_code" 
+                           value="<?php echo esc_attr($short_code); ?>" class="regular-text" 
+                           pattern="[a-zA-Z0-9]+" title="<?php _e('Only letters and numbers allowed', 'wp-link-tracker'); ?>" />
+                    <p class="description"><?php _e('Leave blank to auto-generate. Only letters and numbers allowed.', 'wp-link-tracker'); ?></p>
+                </td>
+            </tr>
+            <?php if (!empty($short_url)): ?>
+            <tr>
+                <th scope="row">
+                    <label><?php _e('Short URL', 'wp-link-tracker'); ?></label>
+                </th>
+                <td>
+                    <input type="text" value="<?php echo esc_attr($short_url); ?>" class="regular-text" readonly />
+                    <button type="button" class="button" onclick="copyToClipboard('<?php echo esc_js($short_url); ?>')"><?php _e('Copy', 'wp-link-tracker'); ?></button>
+                    <p class="description"><?php _e('This is your trackable short URL.', 'wp-link-tracker'); ?></p>
+                </td>
+            </tr>
+            <?php endif; ?>
+        </table>
+
+        <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                alert('<?php _e('URL copied to clipboard!', 'wp-link-tracker'); ?>');
+            });
+        }
+        </script>
+        <?php
+    }
+
+    /**
+     * Statistics meta box.
+     */
+    public function statistics_meta_box($post) {
+        $total_clicks = get_post_meta($post->ID, '_wplinktracker_total_clicks', true);
+        $unique_visitors = get_post_meta($post->ID, '_wplinktracker_unique_visitors', true);
+
+        ?>
+        <p><strong><?php _e('Total Clicks:', 'wp-link-tracker'); ?></strong> <?php echo intval($total_clicks); ?></p>
+        <p><strong><?php _e('Unique Visitors:', 'wp-link-tracker'); ?></strong> <?php echo intval($unique_visitors); ?></p>
+        
+        <?php if ($post->ID): ?>
         <p>
-            <label for="wplinktracker_destination_url"><?php _e('Destination URL:', 'wp-link-tracker'); ?></label>
-            <input type="url" id="wplinktracker_destination_url" name="wplinktracker_destination_url" value="<?php echo esc_url($destination_url); ?>" style="width: 100%;" required />
-        </p>
-        <?php if (!empty($short_code)) : ?>
-        <p>
-            <label><?php _e('Short URL:', 'wp-link-tracker'); ?></label>
-            <input type="text" value="<?php echo esc_url($short_url); ?>" readonly style="width: 100%;" />
-            <button type="button" class="button" onclick="navigator.clipboard.writeText('<?php echo esc_url($short_url); ?>')">Copy</button>
-        </p>
-        <p>
-            <label><?php _e('Shortcode:', 'wp-link-tracker'); ?></label>
-            <input type="text" value='[tracked_link id="<?php echo $post->ID; ?>"]' readonly style="width: 100%;" />
-            <button type="button" class="button" onclick="navigator.clipboard.writeText('[tracked_link id=\'<?php echo $post->ID; ?>\']')">Copy</button>
+            <a href="<?php echo admin_url('admin.php?page=wp-link-tracker&link_id=' . $post->ID); ?>" class="button">
+                <?php _e('View Detailed Stats', 'wp-link-tracker'); ?>
+            </a>
         </p>
         <?php endif; ?>
         <?php
     }
 
     /**
-     * Render the link stats meta box.
+     * Save meta boxes.
      */
-    public function render_link_stats_meta_box($post) {
-        ?>
-        <div id="wplinktracker-stats-container">
-            <div class="wplinktracker-stats-summary">
-                <div class="wplinktracker-stat-box">
-                    <h3><?php _e('Total Clicks', 'wp-link-tracker'); ?></h3>
-                    <div class="wplinktracker-stat-value" id="wplinktracker-total-clicks">
-                        <?php echo intval(get_post_meta($post->ID, '_wplinktracker_total_clicks', true)); ?>
-                    </div>
-                </div>
-                <div class="wplinktracker-stat-box">
-                    <h3><?php _e('Unique Visitors', 'wp-link-tracker'); ?></h3>
-                    <div class="wplinktracker-stat-value" id="wplinktracker-unique-visitors">
-                        <?php echo intval(get_post_meta($post->ID, '_wplinktracker_unique_visitors', true)); ?>
-                    </div>
-                </div>
-                <div class="wplinktracker-stat-box">
-                    <h3><?php _e('Conversion Rate', 'wp-link-tracker'); ?></h3>
-                    <div class="wplinktracker-stat-value" id="wplinktracker-conversion-rate">
-                        <?php 
-                        $total_clicks = intval(get_post_meta($post->ID, '_wplinktracker_total_clicks', true));
-                        $unique_visitors = intval(get_post_meta($post->ID, '_wplinktracker_unique_visitors', true));
-                        echo ($unique_visitors > 0) ? round(($total_clicks / $unique_visitors) * 100, 2) . '%' : '0%';
-                        ?>
-                    </div>
-                </div>
-            </div>
-            <div class="wplinktracker-charts">
-                <div class="wplinktracker-chart">
-                    <h3><?php _e('Clicks Over Time', 'wp-link-tracker'); ?></h3>
-                    <div id="wplinktracker-clicks-chart" style="height: 250px;">
-                        <p><?php _e('Loading chart...', 'wp-link-tracker'); ?></p>
-                    </div>
-                </div>
-            </div>
-            <div class="wplinktracker-tables">
-                <div class="wplinktracker-table">
-                    <h3><?php _e('Top Referrers', 'wp-link-tracker'); ?></h3>
-                    <div id="wplinktracker-referrers-table">
-                        <p><?php _e('Loading data...', 'wp-link-tracker'); ?></p>
-                    </div>
-                </div>
-                <div class="wplinktracker-table">
-                    <h3><?php _e('Devices', 'wp-link-tracker'); ?></h3>
-                    <div id="wplinktracker-devices-table">
-                        <p><?php _e('Loading data...', 'wp-link-tracker'); ?></p>
-                    </div>
-                </div>
-            </div>
-            <input type="hidden" id="wplinktracker-post-id" value="<?php echo $post->ID; ?>" />
-        </div>
-        <script>
-            jQuery(document).ready(function($) {
-                // Load stats via AJAX
-                function loadStats() {
-                    $.ajax({
-                        url: ajaxurl,
-                        type: 'POST',
-                        data: {
-                            action: 'wp_link_tracker_get_stats',
-                            post_id: $('#wplinktracker-post-id').val(),
-                            nonce: '<?php echo wp_create_nonce('wp_link_tracker_stats_nonce'); ?>'
-                        },
-                        success: function(response) {
-                            if (response.success) {
-                                // Update stats
-                                $('#wplinktracker-total-clicks').text(response.data.total_clicks);
-                                $('#wplinktracker-unique-visitors').text(response.data.unique_visitors);
-                                $('#wplinktracker-conversion-rate').text(response.data.conversion_rate);
-                                
-                                // Update tables
-                                $('#wplinktracker-referrers-table').html(response.data.referrers_table);
-                                $('#wplinktracker-devices-table').html(response.data.devices_table);
-                                
-                                // Update chart (assuming we're using a charting library)
-                                if (typeof drawClicksChart === 'function') {
-                                    drawClicksChart(response.data.clicks_data);
-                                }
-                            }
-                        }
-                    });
-                }
-                
-                // Load stats on page load
-                loadStats();
-                
-                // Refresh stats every 60 seconds
-                setInterval(loadStats, 60000);
-            });
-        </script>
-        <style>
-            .wplinktracker-stats-summary {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 20px;
-            }
-            .wplinktracker-stat-box {
-                flex: 1;
-                margin-right: 15px;
-                padding: 15px;
-                background: #f9f9f9;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                text-align: center;
-            }
-            .wplinktracker-stat-box:last-child {
-                margin-right: 0;
-            }
-            .wplinktracker-stat-value {
-                font-size: 24px;
-                font-weight: bold;
-                color: #0073aa;
-            }
-            .wplinktracker-charts, .wplinktracker-tables {
-                display: flex;
-                margin-bottom: 20px;
-            }
-            .wplinktracker-chart, .wplinktracker-table {
-                flex: 1;
-                margin-right: 15px;
-                padding: 15px;
-                background: #f9f9f9;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-            }
-            .wplinktracker-chart:last-child, .wplinktracker-table:last-child {
-                margin-right: 0;
-            }
-        </style>
-        <?php
-    }
-
-    /**
-     * Save meta box data.
-     */
-    public function save_meta_box_data($post_id) {
-        // Check if our nonce is set
-        if (!isset($_POST['wplinktracker_meta_box_nonce'])) {
+    public function save_meta_boxes($post_id) {
+        // Check if nonce is valid
+        if (!isset($_POST['wplinktracker_meta_box_nonce']) || 
+            !wp_verify_nonce($_POST['wplinktracker_meta_box_nonce'], 'wplinktracker_meta_box')) {
             return;
         }
 
-        // Verify the nonce
-        if (!wp_verify_nonce($_POST['wplinktracker_meta_box_nonce'], 'wplinktracker_save_meta_box_data')) {
+        // Check if user has permissions to save data
+        if (!current_user_can('edit_post', $post_id)) {
             return;
         }
 
-        // If this is an autosave, we don't want to do anything
+        // Check if not an autosave
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
             return;
         }
 
-        // Check the user's permissions
-        if (isset($_POST['post_type']) && 'wplinktracker' == $_POST['post_type']) {
-            if (!current_user_can('edit_post', $post_id)) {
-                return;
-            }
+        // Check post type
+        if (get_post_type($post_id) !== 'wplinktracker') {
+            return;
         }
 
-        // Save the destination URL
+        // Save destination URL
         if (isset($_POST['wplinktracker_destination_url'])) {
-            $destination_url = esc_url_raw($_POST['wplinktracker_destination_url']);
+            $destination_url = sanitize_url($_POST['wplinktracker_destination_url']);
             update_post_meta($post_id, '_wplinktracker_destination_url', $destination_url);
         }
 
-        // Generate short code if it doesn't exist
-        $short_code = get_post_meta($post_id, '_wplinktracker_short_code', true);
+        // Save or generate short code
+        $short_code = '';
+        if (isset($_POST['wplinktracker_short_code']) && !empty($_POST['wplinktracker_short_code'])) {
+            $short_code = sanitize_text_field($_POST['wplinktracker_short_code']);
+            // Validate short code format
+            if (!preg_match('/^[a-zA-Z0-9]+$/', $short_code)) {
+                $short_code = '';
+            }
+        }
+
+        // If no short code provided or invalid, generate one
         if (empty($short_code)) {
             $short_code = $this->generate_short_code();
-            update_post_meta($post_id, '_wplinktracker_short_code', $short_code);
+        }
+
+        // Make sure short code is unique
+        $short_code = $this->ensure_unique_short_code($short_code, $post_id);
+        
+        update_post_meta($post_id, '_wplinktracker_short_code', $short_code);
+
+        // Initialize click counts if this is a new post
+        if (!get_post_meta($post_id, '_wplinktracker_total_clicks', true)) {
+            update_post_meta($post_id, '_wplinktracker_total_clicks', 0);
+        }
+        if (!get_post_meta($post_id, '_wplinktracker_unique_visitors', true)) {
+            update_post_meta($post_id, '_wplinktracker_unique_visitors', 0);
         }
     }
 
     /**
-     * Generate a unique short code.
+     * Generate a random short code.
      */
     private function generate_short_code($length = 6) {
-        $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        $charactersLength = strlen($characters);
+        $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         $short_code = '';
         
         for ($i = 0; $i < $length; $i++) {
-            $short_code .= $characters[rand(0, $charactersLength - 1)];
+            $short_code .= $characters[rand(0, strlen($characters) - 1)];
         }
         
-        // Check if the code already exists
+        return $short_code;
+    }
+
+    /**
+     * Ensure the short code is unique.
+     */
+    private function ensure_unique_short_code($short_code, $current_post_id = 0) {
+        $original_short_code = $short_code;
+        $counter = 1;
+        
+        while ($this->short_code_exists($short_code, $current_post_id)) {
+            $short_code = $original_short_code . $counter;
+            $counter++;
+            
+            // Prevent infinite loop
+            if ($counter > 1000) {
+                $short_code = $this->generate_short_code(8);
+                break;
+            }
+        }
+        
+        return $short_code;
+    }
+
+    /**
+     * Check if a short code already exists.
+     */
+    private function short_code_exists($short_code, $exclude_post_id = 0) {
         $args = array(
             'post_type' => 'wplinktracker',
             'meta_query' => array(
@@ -337,16 +280,85 @@ class WP_Link_Tracker_Post_Type {
                     'value' => $short_code,
                     'compare' => '='
                 )
-            )
+            ),
+            'posts_per_page' => 1,
+            'post_status' => array('publish', 'draft', 'private'),
+            'fields' => 'ids'
         );
         
-        $query = new WP_Query($args);
-        
-        // If the code exists, generate a new one
-        if ($query->have_posts()) {
-            return $this->generate_short_code($length);
+        if ($exclude_post_id > 0) {
+            $args['post__not_in'] = array($exclude_post_id);
         }
         
-        return $short_code;
+        $query = new WP_Query($args);
+        return $query->have_posts();
+    }
+
+    /**
+     * Get the full short URL.
+     */
+    private function get_short_url($short_code) {
+        if (empty($short_code)) {
+            return '';
+        }
+        
+        return home_url('/go/' . $short_code);
+    }
+
+    /**
+     * Add custom columns to the post list.
+     */
+    public function add_custom_columns($columns) {
+        $new_columns = array();
+        
+        foreach ($columns as $key => $value) {
+            $new_columns[$key] = $value;
+            
+            if ($key === 'title') {
+                $new_columns['destination_url'] = __('Destination URL', 'wp-link-tracker');
+                $new_columns['short_url'] = __('Short URL', 'wp-link-tracker');
+                $new_columns['clicks'] = __('Clicks', 'wp-link-tracker');
+                $new_columns['unique_visitors'] = __('Unique Visitors', 'wp-link-tracker');
+            }
+        }
+        
+        return $new_columns;
+    }
+
+    /**
+     * Display custom column content.
+     */
+    public function display_custom_columns($column, $post_id) {
+        switch ($column) {
+            case 'destination_url':
+                $destination_url = get_post_meta($post_id, '_wplinktracker_destination_url', true);
+                if ($destination_url) {
+                    echo '<a href="' . esc_url($destination_url) . '" target="_blank">' . esc_html($destination_url) . '</a>';
+                } else {
+                    echo '—';
+                }
+                break;
+                
+            case 'short_url':
+                $short_code = get_post_meta($post_id, '_wplinktracker_short_code', true);
+                if ($short_code) {
+                    $short_url = $this->get_short_url($short_code);
+                    echo '<a href="' . esc_url($short_url) . '" target="_blank">' . esc_html($short_url) . '</a>';
+                    echo '<br><button type="button" class="button button-small" onclick="copyToClipboard(\'' . esc_js($short_url) . '\')">' . __('Copy', 'wp-link-tracker') . '</button>';
+                } else {
+                    echo '—';
+                }
+                break;
+                
+            case 'clicks':
+                $total_clicks = get_post_meta($post_id, '_wplinktracker_total_clicks', true);
+                echo intval($total_clicks);
+                break;
+                
+            case 'unique_visitors':
+                $unique_visitors = get_post_meta($post_id, '_wplinktracker_unique_visitors', true);
+                echo intval($unique_visitors);
+                break;
+        }
     }
 }

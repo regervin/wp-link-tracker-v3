@@ -9,19 +9,46 @@ class WP_Link_Tracker_Redirect {
     public function init() {
         add_action('init', array($this, 'add_rewrite_rules'));
         add_action('template_redirect', array($this, 'handle_redirect'));
+        add_filter('query_vars', array($this, 'add_query_vars'));
+        
+        // Ensure rewrite rules are flushed when needed
+        add_action('wp_loaded', array($this, 'maybe_flush_rewrite_rules'));
+    }
+
+    /**
+     * Add custom query vars.
+     */
+    public function add_query_vars($vars) {
+        $vars[] = 'wplinktracker_shortcode';
+        return $vars;
     }
 
     /**
      * Add rewrite rules for short links.
      */
     public function add_rewrite_rules() {
+        // Add rewrite rule for /go/shortcode format
         add_rewrite_rule(
-            'go/([a-zA-Z0-9]+)/?$',
+            '^go/([a-zA-Z0-9]+)/?$',
             'index.php?wplinktracker_shortcode=$matches[1]',
             'top'
         );
         
+        // Add the query var
         add_rewrite_tag('%wplinktracker_shortcode%', '([a-zA-Z0-9]+)');
+    }
+
+    /**
+     * Maybe flush rewrite rules if they haven't been set up properly.
+     */
+    public function maybe_flush_rewrite_rules() {
+        // Check if our rewrite rule exists
+        $rules = get_option('rewrite_rules');
+        
+        if (!$rules || !isset($rules['^go/([a-zA-Z0-9]+)/?$'])) {
+            // Our rule doesn't exist, flush rewrite rules
+            flush_rewrite_rules();
+        }
     }
 
     /**
@@ -31,11 +58,11 @@ class WP_Link_Tracker_Redirect {
         global $wp_query;
         
         // Check if this is a tracked link request
-        if (!isset($wp_query->query_vars['wplinktracker_shortcode'])) {
+        $short_code = get_query_var('wplinktracker_shortcode');
+        
+        if (empty($short_code)) {
             return;
         }
-        
-        $short_code = $wp_query->query_vars['wplinktracker_shortcode'];
         
         // Find the post with this short code
         $args = array(
@@ -47,7 +74,8 @@ class WP_Link_Tracker_Redirect {
                     'compare' => '='
                 )
             ),
-            'posts_per_page' => 1
+            'posts_per_page' => 1,
+            'post_status' => 'publish'
         );
         
         $query = new WP_Query($args);
@@ -57,7 +85,18 @@ class WP_Link_Tracker_Redirect {
             $post_id = get_the_ID();
             $destination_url = get_post_meta($post_id, '_wplinktracker_destination_url', true);
             
+            // Reset post data
+            wp_reset_postdata();
+            
             if (!empty($destination_url)) {
+                // Validate the destination URL
+                if (!filter_var($destination_url, FILTER_VALIDATE_URL)) {
+                    // If it's not a valid URL, try adding http://
+                    if (!preg_match('/^https?:\/\//', $destination_url)) {
+                        $destination_url = 'http://' . $destination_url;
+                    }
+                }
+                
                 // Track this click
                 $this->track_click($post_id);
                 
@@ -73,14 +112,21 @@ class WP_Link_Tracker_Redirect {
                     $destination_url = add_query_arg($utm_params, $destination_url);
                 }
                 
-                // Redirect to the destination URL
+                // Perform the redirect
                 wp_redirect($destination_url, 302);
                 exit;
             }
         }
         
+        // Reset post data in case of error
+        wp_reset_postdata();
+        
         // If we get here, the short code was not found or the destination URL is empty
-        wp_redirect(home_url(), 302);
+        // Redirect to home page with a 404 status
+        global $wp_query;
+        $wp_query->set_404();
+        status_header(404);
+        get_template_part(404);
         exit;
     }
 
@@ -106,7 +152,7 @@ class WP_Link_Tracker_Redirect {
         // Insert click data into the database
         $table_name = $wpdb->prefix . 'wplinktracker_clicks';
         
-        $wpdb->insert(
+        $result = $wpdb->insert(
             $table_name,
             array(
                 'post_id' => $post_id,
@@ -123,8 +169,29 @@ class WP_Link_Tracker_Redirect {
                 'utm_campaign' => isset($_GET['utm_campaign']) ? sanitize_text_field($_GET['utm_campaign']) : '',
                 'utm_term' => isset($_GET['utm_term']) ? sanitize_text_field($_GET['utm_term']) : '',
                 'utm_content' => isset($_GET['utm_content']) ? sanitize_text_field($_GET['utm_content']) : '',
+            ),
+            array(
+                '%d', // post_id
+                '%s', // visitor_id
+                '%s', // ip_address
+                '%s', // user_agent
+                '%s', // referrer
+                '%s', // device_type
+                '%s', // browser
+                '%s', // os
+                '%s', // click_time
+                '%s', // utm_source
+                '%s', // utm_medium
+                '%s', // utm_campaign
+                '%s', // utm_term
+                '%s'  // utm_content
             )
         );
+        
+        // Log any database errors
+        if ($result === false) {
+            error_log('WP Link Tracker: Failed to insert click data - ' . $wpdb->last_error);
+        }
         
         // Update click counts
         $total_clicks = (int) get_post_meta($post_id, '_wplinktracker_total_clicks', true);
@@ -136,7 +203,9 @@ class WP_Link_Tracker_Redirect {
             $post_id
         ));
         
-        update_post_meta($post_id, '_wplinktracker_unique_visitors', $unique_visitors);
+        if ($unique_visitors !== null) {
+            update_post_meta($post_id, '_wplinktracker_unique_visitors', $unique_visitors);
+        }
     }
 
     /**
@@ -154,9 +223,19 @@ class WP_Link_Tracker_Redirect {
         );
         
         foreach ($ip_keys as $key) {
-            if (isset($_SERVER[$key]) && filter_var($_SERVER[$key], FILTER_VALIDATE_IP)) {
-                return $_SERVER[$key];
+            if (isset($_SERVER[$key]) && !empty($_SERVER[$key])) {
+                $ips = explode(',', $_SERVER[$key]);
+                $ip = trim($ips[0]);
+                
+                if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                    return $ip;
+                }
             }
+        }
+        
+        // Fallback to REMOTE_ADDR
+        if (isset($_SERVER['REMOTE_ADDR']) && filter_var($_SERVER['REMOTE_ADDR'], FILTER_VALIDATE_IP)) {
+            return $_SERVER['REMOTE_ADDR'];
         }
         
         return '0.0.0.0';
@@ -166,6 +245,10 @@ class WP_Link_Tracker_Redirect {
      * Get the device type from user agent.
      */
     private function get_device_type($user_agent) {
+        if (empty($user_agent)) {
+            return 'Unknown';
+        }
+        
         if (preg_match('/(tablet|ipad|playbook|silk)|(android(?!.*mobile))/i', $user_agent)) {
             return 'Tablet';
         }
@@ -181,6 +264,10 @@ class WP_Link_Tracker_Redirect {
      * Get the browser from user agent.
      */
     private function get_browser($user_agent) {
+        if (empty($user_agent)) {
+            return 'Unknown';
+        }
+        
         if (preg_match('/MSIE/i', $user_agent) || preg_match('/Trident/i', $user_agent)) {
             return 'Internet Explorer';
         } elseif (preg_match('/Firefox/i', $user_agent)) {
@@ -208,6 +295,10 @@ class WP_Link_Tracker_Redirect {
      * Get the operating system from user agent.
      */
     private function get_operating_system($user_agent) {
+        if (empty($user_agent)) {
+            return 'Unknown';
+        }
+        
         if (preg_match('/windows|win32|win64/i', $user_agent)) {
             return 'Windows';
         } elseif (preg_match('/macintosh|mac os x/i', $user_agent)) {

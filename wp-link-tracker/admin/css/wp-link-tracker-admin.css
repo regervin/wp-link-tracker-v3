@@ -1,5 +1,56 @@
-/* WP Link Tracker Admin Styles */
+/**
+ * Admin styles for WP Link Tracker
+ */
 
+/* Meta box styles */
+.wplinktracker-stats-summary {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.wplinktracker-stat-box {
+    flex: 1;
+    margin-right: 15px;
+    padding: 15px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.wplinktracker-stat-box:last-child {
+    margin-right: 0;
+}
+
+.wplinktracker-stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #0073aa;
+}
+
+.wplinktracker-charts, 
+.wplinktracker-tables {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.wplinktracker-chart, 
+.wplinktracker-table {
+    flex: 1;
+    margin-right: 15px;
+    padding: 15px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.wplinktracker-chart:last-child, 
+.wplinktracker-table:last-child {
+    margin-right: 0;
+}
+
+/* Dashboard styles */
 .wplinktracker-dashboard {
     margin-top: 20px;
 }
@@ -7,83 +58,39 @@
 .wplinktracker-dashboard-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
     margin-bottom: 20px;
-    padding: 15px;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.wplinktracker-date-range {
-    flex: 1;
-}
-
-.wplinktracker-date-range label {
-    font-weight: 600;
-    margin-right: 10px;
-}
-
-.wplinktracker-date-range select {
-    margin-right: 15px;
-}
-
-.wplinktracker-date-actions {
-    margin-top: 10px;
-}
-
-.wplinktracker-date-actions .button {
-    margin-right: 10px;
-    margin-bottom: 5px;
-}
-
-#wplinktracker-custom-date-range {
-    margin-top: 10px;
-    padding: 10px;
-    background: #f9f9f9;
-    border-radius: 3px;
-}
-
-#wplinktracker-custom-date-range input[type="date"] {
-    margin-right: 10px;
 }
 
 .wplinktracker-dashboard-summary {
     display: flex;
     justify-content: space-between;
     margin-bottom: 30px;
-    gap: 15px;
 }
 
 .wplinktracker-summary-box {
     flex: 1;
+    margin-right: 15px;
     padding: 20px;
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 4px;
     text-align: center;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    transition: box-shadow 0.2s ease;
 }
 
-.wplinktracker-summary-box:hover {
-    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+.wplinktracker-summary-box:last-child {
+    margin-right: 0;
 }
 
 .wplinktracker-summary-box h3 {
     margin-top: 0;
-    margin-bottom: 15px;
     color: #23282d;
-    font-size: 16px;
-    font-weight: 600;
 }
 
 .wplinktracker-summary-value {
-    font-size: 32px;
+    font-size: 28px;
     font-weight: bold;
     color: #0073aa;
-    line-height: 1.2;
 }
 
 .wplinktracker-dashboard-charts,
@@ -91,12 +98,12 @@
 .wplinktracker-dashboard-devices {
     display: flex;
     margin-bottom: 30px;
-    gap: 15px;
 }
 
 .wplinktracker-chart-container,
 .wplinktracker-table-container {
     flex: 1;
+    margin-right: 15px;
     padding: 20px;
     background: #fff;
     border: 1px solid #ddd;
@@ -104,261 +111,112 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-.wplinktracker-chart-container h3,
-.wplinktracker-table-container h3 {
-    margin-top: 0;
-    margin-bottom: 20px;
-    color: #23282d;
-    font-size: 18px;
-    font-weight: 600;
-    border-bottom: 2px solid #0073aa;
-    padding-bottom: 10px;
+/* Set fixed height for clicks chart container and add scrolling if needed */
+.wplinktracker-chart-container canvas#wplinktracker-clicks-chart {
+    max-height: 300px;
 }
 
-/* Table content scrolling */
-.wplinktracker-table-content {
-    max-height: 350px;
+/* Set fixed height for device charts and add scrolling if needed */
+.wplinktracker-dashboard-devices .wplinktracker-chart-container {
+    height: 350px;
+    overflow: hidden;
+}
+
+.wplinktracker-dashboard-devices .wplinktracker-chart-container canvas {
+    max-height: 300px;
+}
+
+/* Set fixed height for table containers and add scrolling */
+.wplinktracker-table-container > div {
+    max-height: 300px;
     overflow-y: auto;
 }
 
-.wplinktracker-table-content table {
-    width: 100%;
-    border-collapse: collapse;
+.wplinktracker-chart-container:last-child,
+.wplinktracker-table-container:last-child {
+    margin-right: 0;
 }
 
-.wplinktracker-table-content th,
-.wplinktracker-table-content td {
-    padding: 10px;
-    text-align: left;
-    border-bottom: 1px solid #eee;
-}
-
-.wplinktracker-table-content th {
-    background: #f9f9f9;
-    font-weight: 600;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-}
-
-.wplinktracker-table-content tr:hover {
-    background: #f9f9f9;
-}
-
-/* Loading states */
-.wplinktracker-loading,
-.wplinktracker-chart-loading {
-    text-align: center;
-    padding: 40px 20px;
-    color: #666;
-}
-
-.wplinktracker-loading .spinner,
-.wplinktracker-chart-loading .spinner {
-    margin-right: 10px;
-}
-
-/* Copy button styling */
-.copy-to-clipboard {
-    font-size: 11px;
-    padding: 2px 8px;
-    margin-top: 5px;
-}
-
-/* Reset button styling */
-#wplinktracker-reset-stats {
-    color: #d63638;
-    border-color: #d63638;
-}
-
-#wplinktracker-reset-stats:hover {
-    background-color: #d63638;
-    color: #fff;
-    border-color: #d63638;
-}
-
-/* Chart containers */
-.wplinktracker-chart-container canvas {
-    max-width: 100%;
-    height: auto;
-}
-
-/* Error states */
-.wplinktracker-error {
-    color: #d63638;
-    font-style: italic;
-}
-
-/* Success states */
-.wplinktracker-success {
-    color: #00a32a;
-    font-weight: 600;
-}
-
-/* Meta box styles */
-.wplinktracker-stats {
-    margin: 10px 0;
-}
-
-.wplinktracker-stat-item {
-    margin-bottom: 10px;
-    padding: 12px;
-    background: #f9f9f9;
-    border-left: 4px solid #0073aa;
-    border-radius: 0 3px 3px 0;
-}
-
-.wplinktracker-stat-item strong {
-    display: inline-block;
-    width: 140px;
+.wplinktracker-chart-container h3,
+.wplinktracker-table-container h3 {
+    margin-top: 0;
     color: #23282d;
 }
 
-.wplinktracker-stat-item span {
-    color: #0073aa;
-    font-weight: 600;
+#wplinktracker-custom-date-range {
+    margin-top: 10px;
 }
 
-/* Post list table improvements */
-.wp-list-table .column-destination,
-.wp-list-table .column-short_url {
-    width: 200px;
-}
-
-.wp-list-table .column-clicks,
-.wp-list-table .column-unique_visitors,
-.wp-list-table .column-conversion_rate {
-    width: 100px;
-    text-align: center;
-}
-
-/* Responsive design */
-@media (max-width: 1200px) {
-    .wplinktracker-dashboard-devices {
-        flex-wrap: wrap;
-    }
-    
-    .wplinktracker-dashboard-devices .wplinktracker-chart-container {
-        flex: 1 1 calc(50% - 7.5px);
-    }
-    
-    .wplinktracker-dashboard-devices .wplinktracker-chart-container:nth-child(3) {
-        flex: 1 1 100%;
-    }
-}
-
+/* Responsive styles */
 @media (max-width: 782px) {
-    .wplinktracker-dashboard-header {
-        flex-direction: column;
-        gap: 15px;
-    }
-    
+    .wplinktracker-stats-summary,
+    .wplinktracker-charts,
+    .wplinktracker-tables,
     .wplinktracker-dashboard-summary,
     .wplinktracker-dashboard-charts,
     .wplinktracker-dashboard-tables,
     .wplinktracker-dashboard-devices {
         flex-direction: column;
-        gap: 15px;
     }
     
-    .wplinktracker-summary-value {
-        font-size: 24px;
-    }
-    
-    .wplinktracker-date-actions .button {
-        display: block;
-        width: 100%;
-        margin-bottom: 5px;
-        text-align: center;
-    }
-}
-
-@media (max-width: 600px) {
-    .wplinktracker-dashboard-header,
+    .wplinktracker-stat-box,
+    .wplinktracker-chart,
+    .wplinktracker-table,
     .wplinktracker-summary-box,
     .wplinktracker-chart-container,
     .wplinktracker-table-container {
-        padding: 15px;
-    }
-    
-    .wplinktracker-summary-value {
-        font-size: 20px;
-    }
-    
-    .wplinktracker-chart-container h3,
-    .wplinktracker-table-container h3 {
-        font-size: 16px;
+        margin-right: 0;
+        margin-bottom: 15px;
     }
 }
 
-/* Animation for loading states */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.wplinktracker-chart-container canvas,
-.wplinktracker-table-content table {
-    animation: fadeIn 0.3s ease-in;
-}
-
-/* Tooltip styles for charts */
-.chartjs-tooltip {
-    background: rgba(0, 0, 0, 0.8);
+/* Quick create form */
+.wplinktracker-quick-create {
+    background: #fff;
+    border: 1px solid #ddd;
     border-radius: 4px;
-    color: white;
-    font-size: 12px;
-    padding: 8px;
-    pointer-events: none;
-    position: absolute;
-    transform: translate(-50%, -100%);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-/* Custom scrollbar for table content */
-.wplinktracker-table-content::-webkit-scrollbar {
-    width: 8px;
+.wplinktracker-quick-create h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
 }
 
-.wplinktracker-table-content::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
+.wplinktracker-form-row {
+    margin-bottom: 15px;
 }
 
-.wplinktracker-table-content::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
+.wplinktracker-form-row label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
 }
 
-.wplinktracker-table-content::-webkit-scrollbar-thumb:hover {
-    background: #a1a1a1;
+.wplinktracker-form-row input[type="text"],
+.wplinktracker-form-row input[type="url"],
+.wplinktracker-form-row select {
+    width: 100%;
 }
 
-/* Focus states for accessibility */
-.wplinktracker-dashboard button:focus,
-.wplinktracker-dashboard select:focus,
-.wplinktracker-dashboard input:focus {
-    outline: 2px solid #0073aa;
-    outline-offset: 2px;
+.wplinktracker-form-actions {
+    margin-top: 20px;
 }
 
-/* Print styles */
-@media print {
-    .wplinktracker-date-actions,
-    .wplinktracker-refresh {
-        display: none;
-    }
-    
-    .wplinktracker-dashboard-summary,
-    .wplinktracker-dashboard-charts,
-    .wplinktracker-dashboard-tables,
-    .wplinktracker-dashboard-devices {
-        flex-direction: column;
-        page-break-inside: avoid;
-    }
-    
-    .wplinktracker-chart-container,
-    .wplinktracker-table-container {
-        margin-bottom: 20px;
-        page-break-inside: avoid;
-    }
+/* Link list enhancements */
+.column-short_url {
+    width: 25%;
+}
+
+.column-clicks,
+.column-unique_visitors,
+.column-conversion_rate {
+    width: 10%;
+    text-align: center;
+}
+
+.copy-to-clipboard {
+    margin-top: 5px !important;
 }
